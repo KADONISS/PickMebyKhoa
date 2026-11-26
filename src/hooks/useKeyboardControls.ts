@@ -17,7 +17,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 /**
  * Global classroom keyboard shortcuts (presentation clicker & teacher keyboard support).
  * - Esc: Close drawer or return to game lobby
- * - 1..9, 0: Switch directly to mini-game 1..10
+ * - 1..9, 0, W: Switch directly to mini-game 1..11
  * - M: Toggle sound mute
  * - D: Toggle classroom management drawer
  * - F: Toggle fullscreen mode
@@ -69,6 +69,15 @@ export function useGlobalKeyboardControls() {
       }
 
       const lower = e.key.toLowerCase();
+
+      if (lower === 'w') {
+        const targetGame = GAME_INFOS[10];
+        if (targetGame) {
+          e.preventDefault();
+          selectGame(targetGame.id);
+        }
+        return;
+      }
 
       if (lower === 'm') {
         e.preventDefault();

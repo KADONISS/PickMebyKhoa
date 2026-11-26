@@ -43,7 +43,7 @@ export const GameLobby: React.FC = () => {
   const filteredGames = GAME_INFOS.filter((game) => {
     if (filterCategory === 'all') return true;
     if (filterCategory === 'classic') return ['wheel', 'chests', 'bomb'].includes(game.id);
-    if (filterCategory === 'arcade') return ['claw', 'gacha', 'balloon', 'caseopen'].includes(game.id);
+    if (filterCategory === 'arcade') return ['claw', 'gacha', 'balloon', 'caseopen', 'wish'].includes(game.id);
     if (filterCategory === 'action') return ['race', 'ufo', 'fishing'].includes(game.id);
     return true;
   });
@@ -72,7 +72,7 @@ export const GameLobby: React.FC = () => {
 
             <p className="text-slate-200 text-sm sm:text-base max-w-2xl leading-relaxed font-medium">
               Bộ sưu tập <strong className="text-amber-300">{GAME_INFOS.length} mini-game</strong> tối ưu cho máy chiếu
-              & bảng tương tác Smartboard. Bấm phím <span className="kbd-badge">1</span>–<span className="kbd-badge">9</span>, <span className="kbd-badge">0</span> để mở nhanh trò chơi!
+              & bảng tương tác Smartboard. Bấm phím <span className="kbd-badge">1</span>–<span className="kbd-badge">9</span>, <span className="kbd-badge">0</span>, <span className="kbd-badge">W</span> để mở nhanh trò chơi!
             </p>
 
             {/* Filter Category Tabs (44px+ touch targets) */}
@@ -150,7 +150,7 @@ export const GameLobby: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredGames.map((game) => {
           const gameIndex = GAME_INFOS.findIndex((g) => g.id === game.id);
-          const shortcutKey = gameIndex === 9 ? '0' : String(gameIndex + 1);
+          const shortcutKey = gameIndex === 9 ? '0' : gameIndex === 10 ? 'W' : String(gameIndex + 1);
           return (
             <div
               key={game.id}

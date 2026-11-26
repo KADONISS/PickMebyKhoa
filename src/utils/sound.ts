@@ -1,5 +1,5 @@
 // Pure Web Audio API Sound Synthesizer (No external audio files required)
-import type { CaseRarity } from '../types';
+import type { CaseRarity, WishRarity } from '../types';
 
 class SoundManager {
   private ctx: AudioContext | null = null;
@@ -721,6 +721,174 @@ class SoundManager {
           });
         });
       }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 16. Genshin Wish: Cosmic Meteor Whoosh
+  public playWishWhoosh(durationSec: number = 1.5) {
+    if (this.muted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const noiseDur = Math.min(durationSec * 0.65, 2.2);
+      const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * noiseDur));
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.sin((Math.PI * i) / bufferSize);
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.setValueAtTime(1.5, now);
+      filter.frequency.setValueAtTime(250, now);
+      filter.frequency.exponentialRampToValueAtTime(1400, now + noiseDur * 0.55);
+      filter.frequency.exponentialRampToValueAtTime(400, now + noiseDur);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.001, now);
+      noiseGain.gain.linearRampToValueAtTime(0.24, now + noiseDur * 0.35);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+
+      // Cosmic space drone (110Hz & 220Hz)
+      [110, 220].forEach((freq) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.08, now + noiseDur * 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + noiseDur + 0.02);
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // 17. Genshin Wish: Mid-air Rarity Color Shift Sweep
+  public playWishColorShift(rarity: WishRarity) {
+    if (this.muted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const dur = 0.35;
+      const [startFreq, endFreq] =
+        rarity === '5star'
+          ? [587.33, 1567.98]
+          : rarity === '4star'
+            ? [523.25, 1046.5]
+            : [440, 880];
+
+      // Dual oscillator (sine + light triangle)
+      (['sine', 'triangle'] as OscillatorType[]).forEach((type, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, now + dur);
+
+        const peak = idx === 0 ? 0.24 : 0.1;
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(peak, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+      });
+
+      // 5-star extra 5th harmonic shimmer (880Hz -> 2349.32Hz)
+      if (rarity === '5star') {
+        const harmOsc = ctx.createOscillator();
+        const harmGain = ctx.createGain();
+        harmOsc.type = 'sine';
+        harmOsc.frequency.setValueAtTime(880, now);
+        harmOsc.frequency.exponentialRampToValueAtTime(2349.32, now + dur);
+
+        harmGain.gain.setValueAtTime(0.001, now);
+        harmGain.gain.linearRampToValueAtTime(0.14, now + 0.04);
+        harmGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        harmOsc.connect(harmGain);
+        harmGain.connect(ctx.destination);
+        harmOsc.start(now);
+        harmOsc.stop(now + dur + 0.02);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 18. Genshin Wish: Impact Flash & Harp/Chime Reveal
+  public playWishReveal(rarity: WishRarity) {
+    if (this.muted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+
+      // Sub-impact punch (95Hz -> 35Hz over 0.26s)
+      const subOsc = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(95, now);
+      subOsc.frequency.exponentialRampToValueAtTime(35, now + 0.26);
+      subGain.gain.setValueAtTime(0.38, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+      subOsc.connect(subGain);
+      subGain.connect(ctx.destination);
+      subOsc.start(now);
+      subOsc.stop(now + 0.28);
+
+      const chord =
+        rarity === '5star'
+          ? [523.25, 783.99, 1174.66, 1318.51, 1567.98, 2093.0]
+          : rarity === '4star'
+            ? [523.25, 659.25, 783.99, 987.77]
+            : [523.25, 659.25, 783.99];
+      const decay = rarity === '5star' ? 1.6 : rarity === '4star' ? 1.2 : 0.9;
+
+      chord.forEach((freq, idx) => {
+        const t = now + idx * 0.05;
+        (['sine', 'triangle'] as OscillatorType[]).forEach((type, layerIdx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(layerIdx === 0 ? freq : freq * 2, t);
+
+          const peak = layerIdx === 0 ? 0.22 : 0.07;
+          gain.gain.setValueAtTime(0.001, t);
+          gain.gain.linearRampToValueAtTime(peak, t + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + decay + 0.03);
+        });
+      });
     } catch {
       // ignore
     }

@@ -173,14 +173,14 @@ export const Navbar: React.FC = () => {
               />
             </button>
 
-            {/* 2x5 Visual Grid Dropdown Popover */}
+            {/* 4-column Visual Grid Dropdown Popover */}
             {isGameMenuOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[340px] sm:w-[660px] max-w-[calc(100vw-2rem)] bg-slate-900 border-2 border-amber-400/80 rounded-3xl p-4 shadow-2xl z-50 animate-pop-in">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[340px] sm:w-[600px] max-w-[calc(100vw-2rem)] bg-slate-900 border-2 border-amber-400/80 rounded-3xl p-4 shadow-2xl z-50 animate-pop-in">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2">
                     <span className="text-xl" aria-hidden="true">👑</span>
                     <span className="font-black text-sm text-amber-300 uppercase tracking-wide">
-                      {GAME_INFOS.length} Mini-Game (Phím 1-9, 0)
+                      {GAME_INFOS.length} Mini-Game (Phím 1-9, 0, W)
                     </span>
                   </div>
                   <button
@@ -192,11 +192,11 @@ export const Navbar: React.FC = () => {
                   </button>
                 </div>
 
-                {/* 2x5 Grid of Games */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                {/* 4-column Grid of Games */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {GAME_INFOS.map((game, idx) => {
                     const isSelected = currentView === 'game' && activeGame === game.id;
-                    const keyLabel = idx === 9 ? '0' : String(idx + 1);
+                    const keyLabel = idx === 9 ? '0' : idx === 10 ? 'W' : String(idx + 1);
                     return (
                       <button
                         key={game.id}
@@ -231,7 +231,7 @@ export const Navbar: React.FC = () => {
           <div className="hidden xl:flex items-center gap-1 pl-1">
             {GAME_INFOS.map((game, idx) => {
               const isActive = currentView === 'game' && activeGame === game.id;
-              const keyLabel = idx === 9 ? '0' : String(idx + 1);
+              const keyLabel = idx === 9 ? '0' : idx === 10 ? 'W' : String(idx + 1);
               return (
                 <button
                   key={game.id}
@@ -339,7 +339,7 @@ export const Navbar: React.FC = () => {
                   </li>
                   <li className="flex items-center justify-between">
                     <span>Chọn nhanh {GAME_INFOS.length} game</span>
-                    <span className="kbd-badge">1 – 9, 0</span>
+                    <span className="kbd-badge">1 – 9, 0, W</span>
                   </li>
                   <li className="flex items-center justify-between">
                     <span>Đặt lại màn chơi</span>

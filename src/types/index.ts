@@ -38,9 +38,20 @@ export type GameType =
   | 'gacha'
   | 'fishing'
   | 'bomb'
-  | 'caseopen';
+  | 'caseopen'
+  | 'wish';
 
 export type CaseRarity = 'milspec' | 'restricted' | 'classified' | 'covert' | 'rare';
+
+export type WishRarity = '3star' | '4star' | '5star';
+export type WishElementKey =
+  | 'pyro'
+  | 'hydro'
+  | 'anemo'
+  | 'electro'
+  | 'dendro'
+  | 'cryo'
+  | 'geo';
 
 export type CurrentView = 'lobby' | 'game';
 

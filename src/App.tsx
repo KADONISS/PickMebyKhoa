@@ -15,6 +15,7 @@ import { GachaMachine } from './components/games/GachaMachine';
 import { OceanFishing } from './components/games/OceanFishing';
 import { HotPotato } from './components/games/HotPotato';
 import { CaseOpening } from './components/games/CaseOpening';
+import { GenshinWish } from './components/games/GenshinWish';
 import { Users, RotateCcw } from 'lucide-react';
 
 const MainGameArea: React.FC = () => {
@@ -49,6 +50,7 @@ const MainGameArea: React.FC = () => {
           {activeGame === 'fishing' && <OceanFishing />}
           {activeGame === 'bomb' && <HotPotato />}
           {activeGame === 'caseopen' && <CaseOpening />}
+          {activeGame === 'wish' && <GenshinWish />}
         </div>
       )}
 

@@ -179,6 +179,18 @@ export const GAME_INFOS: GameInfo[] = [
     borderAccent: 'border-amber-400/50 hover:border-amber-300',
     highlightTags: ['Băng chuyền danh hiệu', 'Giảm tốc hồi hộp', 'Công bằng 100%'],
   },
+  {
+    id: 'wish',
+    title: 'Cầu Nguyện Sao Băng',
+    icon: '🌠',
+    bannerIcon: '✨',
+    badge: 'Gacha Vũ Trụ • 5★ Rực Rỡ',
+    description:
+      'Ngước nhìn bầu trời đêm và triệu hồi sao băng đổi màu 3★, 4★, 5★ cùng 7 Nguyên Tố Lớp Học — công bằng 100%!',
+    colorGradient: 'from-indigo-900 via-purple-700 to-amber-500',
+    borderAccent: 'border-indigo-400/50 hover:border-amber-300',
+    highlightTags: ['Sao băng đổi màu', '7 Nguyên Tố Lớp Học', 'Công bằng 100%'],
+  },
 ];
 
 export function createStudent(name: string, index: number = 0): Student {
