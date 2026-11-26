@@ -37,7 +37,10 @@ export type GameType =
   | 'claw'
   | 'gacha'
   | 'fishing'
-  | 'bomb';
+  | 'bomb'
+  | 'caseopen';
+
+export type CaseRarity = 'milspec' | 'restricted' | 'classified' | 'covert' | 'rare';
 
 export type CurrentView = 'lobby' | 'game';
 

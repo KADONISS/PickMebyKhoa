@@ -17,7 +17,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 /**
  * Global classroom keyboard shortcuts (presentation clicker & teacher keyboard support).
  * - Esc: Close drawer or return to game lobby
- * - 1..9: Switch directly to mini-game 1..9
+ * - 1..9, 0: Switch directly to mini-game 1..10
  * - M: Toggle sound mute
  * - D: Toggle classroom management drawer
  * - F: Toggle fullscreen mode
@@ -57,9 +57,9 @@ export function useGlobalKeyboardControls() {
       // Do not trigger global navigation while modal or drawer is blocking
       if (winnerState.isOpen || isDrawerOpen) return;
 
-      // Number keys 1-9 jump directly to the corresponding mini-game
-      if (/^[1-9]$/.test(e.key)) {
-        const idx = parseInt(e.key, 10) - 1;
+      // Number keys 1-9 and 0 jump directly to mini-games 1-10
+      if (/^[0-9]$/.test(e.key)) {
+        const idx = e.key === '0' ? 9 : parseInt(e.key, 10) - 1;
         const targetGame = GAME_INFOS[idx];
         if (targetGame) {
           e.preventDefault();

@@ -14,6 +14,7 @@ import { ClawMachine } from './components/games/ClawMachine';
 import { GachaMachine } from './components/games/GachaMachine';
 import { OceanFishing } from './components/games/OceanFishing';
 import { HotPotato } from './components/games/HotPotato';
+import { CaseOpening } from './components/games/CaseOpening';
 import { Users, RotateCcw } from 'lucide-react';
 
 const MainGameArea: React.FC = () => {
@@ -47,6 +48,7 @@ const MainGameArea: React.FC = () => {
           {activeGame === 'gacha' && <GachaMachine />}
           {activeGame === 'fishing' && <OceanFishing />}
           {activeGame === 'bomb' && <HotPotato />}
+          {activeGame === 'caseopen' && <CaseOpening />}
         </div>
       )}
 

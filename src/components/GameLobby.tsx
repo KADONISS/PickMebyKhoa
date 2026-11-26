@@ -43,7 +43,7 @@ export const GameLobby: React.FC = () => {
   const filteredGames = GAME_INFOS.filter((game) => {
     if (filterCategory === 'all') return true;
     if (filterCategory === 'classic') return ['wheel', 'chests', 'bomb'].includes(game.id);
-    if (filterCategory === 'arcade') return ['claw', 'gacha', 'balloon'].includes(game.id);
+    if (filterCategory === 'arcade') return ['claw', 'gacha', 'balloon', 'caseopen'].includes(game.id);
     if (filterCategory === 'action') return ['race', 'ufo', 'fishing'].includes(game.id);
     return true;
   });
@@ -62,7 +62,7 @@ export const GameLobby: React.FC = () => {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-200 font-black text-xs sm:text-sm tracking-wider uppercase">
               <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
-              <span>Sảnh Trò Chơi Lớp Học (9 Game)</span>
+              <span>Sảnh Trò Chơi Lớp Học ({GAME_INFOS.length} Game)</span>
             </div>
 
             <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-2.5 projector-text">
@@ -71,8 +71,8 @@ export const GameLobby: React.FC = () => {
             </h2>
 
             <p className="text-slate-200 text-sm sm:text-base max-w-2xl leading-relaxed font-medium">
-              Bộ sưu tập <strong className="text-amber-300">9 mini-game</strong> tối ưu cho máy chiếu
-              & bảng tương tác Smartboard. Bấm phím <span className="kbd-badge">1</span>–<span className="kbd-badge">9</span> để mở nhanh trò chơi!
+              Bộ sưu tập <strong className="text-amber-300">{GAME_INFOS.length} mini-game</strong> tối ưu cho máy chiếu
+              & bảng tương tác Smartboard. Bấm phím <span className="kbd-badge">1</span>–<span className="kbd-badge">9</span>, <span className="kbd-badge">0</span> để mở nhanh trò chơi!
             </p>
 
             {/* Filter Category Tabs (44px+ touch targets) */}
@@ -146,10 +146,11 @@ export const GameLobby: React.FC = () => {
         </div>
       </div>
 
-      {/* 9 Mini-Game Cards Grid (3x3 Layout) */}
+      {/* Mini-Game Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredGames.map((game) => {
-          const shortcutNumber = GAME_INFOS.findIndex((g) => g.id === game.id) + 1;
+          const gameIndex = GAME_INFOS.findIndex((g) => g.id === game.id);
+          const shortcutKey = gameIndex === 9 ? '0' : String(gameIndex + 1);
           return (
             <div
               key={game.id}
@@ -179,9 +180,9 @@ export const GameLobby: React.FC = () => {
                     </span>
                     <span
                       className="kbd-badge bg-black/45"
-                      title={`Phím tắt ${shortcutNumber}`}
+                      title={`Phím tắt ${shortcutKey}`}
                     >
-                      #{shortcutNumber}
+                      #{shortcutKey}
                     </span>
                   </div>
                 </div>

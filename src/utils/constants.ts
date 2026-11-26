@@ -168,6 +168,17 @@ export const GAME_INFOS: GameInfo[] = [
     borderAccent: 'border-red-400/40 hover:border-red-400',
     highlightTags: ['Vừa vặn 1 màn hình 45 HS', 'Tít tít dồn dập', 'Nổ pháo giấy bất ngờ'],
   },
+  {
+    id: 'caseopen',
+    title: 'Mở Hòm Danh Hiệu',
+    icon: '🧰',
+    bannerIcon: '💎',
+    badge: 'Danh Hiệu • Cực Hồi Hộp',
+    description: 'Băng chuyền mở hòm danh hiệu học đường: thẻ học sinh lướt qua kim chỉ vàng, giảm tốc đầy kịch tính và công bằng 100%!',
+    colorGradient: 'from-slate-700 via-amber-600 to-yellow-500',
+    borderAccent: 'border-amber-400/50 hover:border-amber-300',
+    highlightTags: ['Băng chuyền danh hiệu', 'Giảm tốc hồi hộp', 'Công bằng 100%'],
+  },
 ];
 
 export function createStudent(name: string, index: number = 0): Student {

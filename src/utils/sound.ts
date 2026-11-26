@@ -1,4 +1,5 @@
 // Pure Web Audio API Sound Synthesizer (No external audio files required)
+import type { CaseRarity } from '../types';
 
 class SoundManager {
   private ctx: AudioContext | null = null;
@@ -495,6 +496,231 @@ class SoundManager {
 
       osc.start(now);
       osc.stop(now + 0.05);
+    } catch {
+      // ignore
+    }
+  }
+
+  // 13. CS:GO Case Opening: Key Unlock & Latch Click
+  public playCaseUnlock() {
+    if (this.muted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+
+      // Layer 1: Metallic key click (t = 0s)
+      const keyOsc = ctx.createOscillator();
+      const keyGain = ctx.createGain();
+      keyOsc.type = 'triangle';
+      keyOsc.frequency.setValueAtTime(2400, now);
+      keyOsc.frequency.exponentialRampToValueAtTime(900, now + 0.03);
+      keyGain.gain.setValueAtTime(0.22, now);
+      keyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      keyOsc.connect(keyGain);
+      keyGain.connect(ctx.destination);
+      keyOsc.start(now);
+      keyOsc.stop(now + 0.035);
+
+      // Layer 2: Latch slide noise (t = 0.08s)
+      const latchTime = now + 0.08;
+      const bufferSize = Math.floor(ctx.sampleRate * 0.065);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.setValueAtTime(1.8, latchTime);
+      filter.frequency.setValueAtTime(1200, latchTime);
+      filter.frequency.exponentialRampToValueAtTime(420, latchTime + 0.065);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.35, latchTime);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, latchTime + 0.065);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(latchTime);
+
+      // Layer 3: Metallic clunk when case lid pops open (t = 0.16s)
+      const clunkTime = now + 0.16;
+      const clunkOsc = ctx.createOscillator();
+      const clunkGain = ctx.createGain();
+      clunkOsc.type = 'triangle';
+      clunkOsc.frequency.setValueAtTime(190, clunkTime);
+      clunkOsc.frequency.exponentialRampToValueAtTime(85, clunkTime + 0.12);
+      clunkGain.gain.setValueAtTime(0.32, clunkTime);
+      clunkGain.gain.exponentialRampToValueAtTime(0.001, clunkTime + 0.12);
+      clunkOsc.connect(clunkGain);
+      clunkGain.connect(ctx.destination);
+      clunkOsc.start(clunkTime);
+      clunkOsc.stop(clunkTime + 0.13);
+    } catch {
+      // ignore
+    }
+  }
+
+  // 14. CS:GO Case Opening: Crisp Card Boundary Tick (~20ms)
+  public playCaseTick(pitch: number = 950) {
+    if (this.muted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const safePitch = Math.max(340, pitch);
+
+      // Layer 1: Short transient click
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(safePitch, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.02);
+      oscGain.gain.setValueAtTime(0.26, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.022);
+
+      // Layer 2: Crisp edge snap noise
+      const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * 0.015));
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(1800, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.18, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+    } catch {
+      // ignore
+    }
+  }
+
+  // 15. CS:GO Case Opening: Rarity-tiered Lock & Reveal Chime
+  public playCaseRareReveal(rarity: CaseRarity) {
+    if (this.muted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+
+      if (rarity === 'milspec' || rarity === 'restricted') {
+        const lockOsc = ctx.createOscillator();
+        const lockGain = ctx.createGain();
+        lockOsc.type = 'triangle';
+        lockOsc.frequency.setValueAtTime(220, now);
+        lockOsc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+        lockGain.gain.setValueAtTime(0.26, now);
+        lockGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        lockOsc.connect(lockGain);
+        lockGain.connect(ctx.destination);
+        lockOsc.start(now);
+        lockOsc.stop(now + 0.13);
+
+        [
+          { freq: 523.25, offset: 0 }, // C5
+          { freq: 783.99, offset: 0.07 }, // G5
+        ].forEach(({ freq, offset }) => {
+          const t = now + offset;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.001, t);
+          gain.gain.linearRampToValueAtTime(0.22, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.2);
+        });
+      } else if (rarity === 'classified' || rarity === 'covert') {
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(160, now);
+        subOsc.frequency.exponentialRampToValueAtTime(55, now + 0.18);
+        subGain.gain.setValueAtTime(0.34, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(now);
+        subOsc.stop(now + 0.2);
+
+        [
+          { freq: 523.25, offset: 0 }, // C5
+          { freq: 659.25, offset: 0.045 }, // E5
+          { freq: 783.99, offset: 0.09 }, // G5
+        ].forEach(({ freq, offset }) => {
+          const t = now + offset;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.001, t);
+          gain.gain.linearRampToValueAtTime(0.24, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.37);
+        });
+      } else {
+        // 'rare' Gold: deep sub-bass drop + shimmering detuned bell chord
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(130, now);
+        subOsc.frequency.exponentialRampToValueAtTime(42, now + 0.28);
+        subGain.gain.setValueAtTime(0.42, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(now);
+        subOsc.stop(now + 0.3);
+
+        const goldNotes = [523.25, 783.99, 987.77, 1318.51]; // C5, G5, B5, E6
+        goldNotes.forEach((freq, idx) => {
+          const t = now + 0.02 + idx * 0.03;
+          [-6, 6].forEach((detuneOffset, pairIdx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = pairIdx === 0 ? 'sine' : 'triangle';
+            osc.frequency.setValueAtTime(freq + detuneOffset, t);
+            gain.gain.setValueAtTime(0.001, t);
+            gain.gain.linearRampToValueAtTime(0.14, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.46);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.48);
+          });
+        });
+      }
     } catch {
       // ignore
     }

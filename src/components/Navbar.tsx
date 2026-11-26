@@ -107,7 +107,7 @@ export const Navbar: React.FC = () => {
                 Vương Quốc Gọi Tên
               </h1>
               <div className="text-xs text-amber-200/85 font-bold flex items-center gap-1">
-                <span>9 Mini-Game Lớp Học</span>
+                <span>{GAME_INFOS.length} Mini-Game Lớp Học</span>
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
               </div>
             </div>
@@ -149,7 +149,7 @@ export const Navbar: React.FC = () => {
             <span className="hidden sm:inline">Sảnh Game</span>
           </button>
 
-          {/* "Chọn Trò Chơi (9)" 3x3 Menu Trigger Button */}
+          {/* "Chọn Trò Chơi (10)" Menu Trigger Button */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => {
@@ -165,7 +165,7 @@ export const Navbar: React.FC = () => {
             >
               <span aria-hidden="true">{currentView === 'game' ? currentGame?.icon : '🎮'}</span>
               <span>
-                {currentView === 'game' ? currentGame?.title : 'Chọn Trò Chơi (9)'}
+                {currentView === 'game' ? currentGame?.title : `Chọn Trò Chơi (${GAME_INFOS.length})`}
               </span>
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${isGameMenuOpen ? 'rotate-180' : ''}`}
@@ -173,14 +173,14 @@ export const Navbar: React.FC = () => {
               />
             </button>
 
-            {/* 3x3 Visual Grid Dropdown Popover */}
+            {/* 2x5 Visual Grid Dropdown Popover */}
             {isGameMenuOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[340px] sm:w-[490px] bg-slate-900 border-2 border-amber-400/80 rounded-3xl p-4 shadow-2xl z-50 animate-pop-in">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[340px] sm:w-[660px] max-w-[calc(100vw-2rem)] bg-slate-900 border-2 border-amber-400/80 rounded-3xl p-4 shadow-2xl z-50 animate-pop-in">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2">
                     <span className="text-xl" aria-hidden="true">👑</span>
                     <span className="font-black text-sm text-amber-300 uppercase tracking-wide">
-                      9 Mini-Game (Phím 1-9)
+                      {GAME_INFOS.length} Mini-Game (Phím 1-9, 0)
                     </span>
                   </div>
                   <button
@@ -192,10 +192,11 @@ export const Navbar: React.FC = () => {
                   </button>
                 </div>
 
-                {/* 3x3 Grid of Games */}
-                <div className="grid grid-cols-3 gap-2.5">
+                {/* 2x5 Grid of Games */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                   {GAME_INFOS.map((game, idx) => {
                     const isSelected = currentView === 'game' && activeGame === game.id;
+                    const keyLabel = idx === 9 ? '0' : String(idx + 1);
                     return (
                       <button
                         key={game.id}
@@ -207,7 +208,7 @@ export const Navbar: React.FC = () => {
                         }`}
                       >
                         <span className="absolute top-1.5 left-2 text-[11px] font-black text-slate-400 bg-slate-900/80 px-1.5 rounded">
-                          {idx + 1}
+                          {keyLabel}
                         </span>
                         <span
                           className="text-2xl sm:text-3xl mb-1.5 filter drop-shadow group-hover:scale-110 transition-transform"
@@ -226,10 +227,11 @@ export const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* Quick horizontal scroll pill strip for 9 games on desktop */}
+          {/* Quick horizontal scroll pill strip for games on desktop */}
           <div className="hidden xl:flex items-center gap-1 pl-1">
             {GAME_INFOS.map((game, idx) => {
               const isActive = currentView === 'game' && activeGame === game.id;
+              const keyLabel = idx === 9 ? '0' : String(idx + 1);
               return (
                 <button
                   key={game.id}
@@ -239,7 +241,7 @@ export const Navbar: React.FC = () => {
                       ? 'bg-amber-400 text-slate-950 scale-105 shadow-md ring-2 ring-amber-300'
                       : 'text-slate-300 hover:text-white hover:bg-slate-700/70'
                   }`}
-                  title={`${game.title} (Phím ${idx + 1})`}
+                  title={`${game.title} (Phím ${keyLabel})`}
                   aria-label={`Chọn ${game.title}`}
                 >
                   <span aria-hidden="true">{game.icon}</span>
@@ -336,8 +338,8 @@ export const Navbar: React.FC = () => {
                     <span className="kbd-badge">SPACE / ENTER</span>
                   </li>
                   <li className="flex items-center justify-between">
-                    <span>Chọn nhanh 9 game</span>
-                    <span className="kbd-badge">1 – 9</span>
+                    <span>Chọn nhanh {GAME_INFOS.length} game</span>
+                    <span className="kbd-badge">1 – 9, 0</span>
                   </li>
                   <li className="flex items-center justify-between">
                     <span>Đặt lại màn chơi</span>
