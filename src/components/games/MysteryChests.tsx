@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useClassroom } from '../../hooks/useClassroomStore';
 import { SPEED_DURATIONS } from '../../types';
 import { soundManager } from '../../utils/sound';
-import { Sparkles, Shuffle, Lock, Unlock } from 'lucide-react';
-import { EmptyState } from '../EmptyState';
+import { Shuffle, Lock, Unlock } from 'lucide-react';
+import { GameStageHUD } from '../GameStageHUD';
 import type { Student } from '../../types';
 
 interface ChestItem {
@@ -24,9 +24,12 @@ export const MysteryChests: React.FC = () => {
 
   const sweepTimeoutRef = useRef<number | null>(null);
 
+  const clearTimers = () => {
+    if (sweepTimeoutRef.current) clearTimeout(sweepTimeoutRef.current);
+  };
+
   // Initialize and shuffle chests when students change
   useEffect(() => {
-    // Shuffled copy
     const shuffledStudents = [...availableStudents].sort(() => Math.random() - 0.5);
     const newChests: ChestItem[] = shuffledStudents.map((s, idx) => ({
       id: `chest_${s.id}_${idx}`,
@@ -40,11 +43,18 @@ export const MysteryChests: React.FC = () => {
     setOpenedChestId(null);
   }, [availableStudents]);
 
-  // Clean timeouts on unmount
   useEffect(() => {
     return () => {
-      if (sweepTimeoutRef.current) clearTimeout(sweepTimeoutRef.current);
+      clearTimers();
     };
+  }, []);
+
+  const resetGame = useCallback(() => {
+    clearTimers();
+    setIsSweeping(false);
+    setActiveSweepIndex(null);
+    setOpenedChestId(null);
+    setChests((prev) => prev.map((c) => ({ ...c, isOpened: false, isHighlighted: false })));
   }, []);
 
   // Shuffle chests animation
@@ -61,27 +71,30 @@ export const MysteryChests: React.FC = () => {
   };
 
   // Open a specific chest (direct click or auto selected)
-  const openChest = (chest: ChestItem) => {
-    if (isSweeping && !chest.isHighlighted) return;
-    if (isShuffling || openedChestId) return;
+  const openChest = useCallback(
+    (chest: ChestItem) => {
+      if (isSweeping && !chest.isHighlighted) return;
+      if (isShuffling || openedChestId) return;
 
-    soundManager.playChestOpen();
-    setOpenedChestId(chest.id);
+      soundManager.playChestOpen();
+      setOpenedChestId(chest.id);
 
-    setChests((prev) =>
-      prev.map((c) => (c.id === chest.id ? { ...c, isOpened: true } : c))
-    );
+      setChests((prev) =>
+        prev.map((c) => (c.id === chest.id ? { ...c, isOpened: true } : c))
+      );
 
-    setTimeout(() => {
-      openWinnerModal(chest.student, 'chests');
-      setOpenedChestId(null);
-      setIsSweeping(false);
-      setActiveSweepIndex(null);
-    }, 550);
-  };
+      setTimeout(() => {
+        openWinnerModal(chest.student, 'chests');
+        setOpenedChestId(null);
+        setIsSweeping(false);
+        setActiveSweepIndex(null);
+      }, 600);
+    },
+    [isSweeping, isShuffling, openedChestId, openWinnerModal]
+  );
 
   // Automated sweeping selection
-  const startRandomSweep = () => {
+  const startRandomSweep = useCallback(() => {
     if (isSweeping || isShuffling || chests.length === 0) return;
 
     soundManager.playClick();
@@ -91,7 +104,6 @@ export const MysteryChests: React.FC = () => {
     const totalDuration = SPEED_DURATIONS[gameSpeed];
     const startTime = performance.now();
 
-    // Winning target index
     const winningIdx = Math.floor(Math.random() * chests.length);
     let currentIndex = 0;
     let stepDelay = 80;
@@ -102,27 +114,37 @@ export const MysteryChests: React.FC = () => {
 
       currentIndex = (currentIndex + 1) % chests.length;
       setActiveSweepIndex(currentIndex);
-      soundManager.playTick(800 + (currentIndex % 5) * 50);
+      soundManager.playTick(780 + (currentIndex % 6) * 55);
 
       if (progress < 0.88) {
-        // Continue sweeping, gradually slowing down
-        stepDelay = 80 + Math.pow(progress, 2.5) * 400;
+        stepDelay = 75 + Math.pow(progress, 2.5) * 380;
         sweepTimeoutRef.current = window.setTimeout(sweepStep, stepDelay);
       } else {
-        // Slowing to the target index
         setActiveSweepIndex(winningIdx);
-        soundManager.playTick(1300);
+        soundManager.playTick(1350);
 
         sweepTimeoutRef.current = window.setTimeout(() => {
-          openChest(chests[winningIdx]);
-        }, 500);
+          const target = chests[winningIdx];
+          if (target) {
+            soundManager.playChestOpen();
+            setOpenedChestId(target.id);
+            setChests((prev) =>
+              prev.map((c) => (c.id === target.id ? { ...c, isOpened: true } : c))
+            );
+            setTimeout(() => {
+              openWinnerModal(target.student, 'chests');
+              setOpenedChestId(null);
+              setIsSweeping(false);
+              setActiveSweepIndex(null);
+            }, 600);
+          }
+        }, 480);
       }
     };
 
     sweepStep();
-  };
+  }, [isSweeping, isShuffling, chests, gameSpeed, openWinnerModal]);
 
-  // Calculate dynamic grid column classes based on student count
   const getGridColsClass = () => {
     const count = chests.length;
     if (count <= 6) return 'grid-cols-2 sm:grid-cols-3';
@@ -133,120 +155,106 @@ export const MysteryChests: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-start p-3 sm:p-6 w-full max-w-6xl mx-auto h-full">
-      {chests.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="w-full flex flex-col gap-4">
-          {/* Top Control Bar */}
-          <div className="bg-slate-800/90 backdrop-blur-md rounded-2xl p-4 border border-slate-700/80 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-slate-300 text-xs sm:text-sm font-semibold">
-              <span className="text-xl">🎁</span>
-              <span>Bấm vào một rương bất kỳ hoặc chọn</span>
-              <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-lg border border-amber-400/30">
-                Mở ngẫu nhiên
-              </span>
-            </div>
+    <GameStageHUD
+      gameId="chests"
+      subtitle="Chạm vào rương bất kỳ để mở, hoặc bấm SPACE để vệt sáng quét ngẫu nhiên!"
+      isRunning={isSweeping || isShuffling}
+      actionLabel="MỞ NGẪU NHIÊN"
+      runningLabel="ĐANG QUÉT KHO BÁU..."
+      actionGradient="from-purple-500 via-fuchsia-500 to-amber-500 hover:from-purple-400 hover:to-amber-400 text-white"
+      onPrimaryAction={startRandomSweep}
+      onReset={resetGame}
+      secondaryAction={
+        <button
+          onClick={handleShuffle}
+          disabled={isSweeping || isShuffling}
+          className="arcade-btn min-h-[48px] px-4 py-2.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-amber-200 border border-amber-400/35 text-xs sm:text-sm"
+          title="Xáo trộn lại vị trí các rương"
+        >
+          <Shuffle className={`w-4 h-4 ${isShuffling ? 'animate-spin' : ''}`} aria-hidden="true" />
+          <span>Xáo Trộn</span>
+        </button>
+      }
+    >
+      {/* Chests Arena Grid */}
+      <div className="relative rounded-3xl p-4 sm:p-6 border-2 border-purple-500/40 shadow-2xl bg-gradient-to-b from-[#130f26] via-[#0f172a] to-[#090d16] min-h-[460px] max-h-[64vh] overflow-y-auto">
+        {/* Subtle magical spotlight */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14),transparent_70%)] pointer-events-none" />
 
-            <div className="flex items-center gap-3">
-              {/* Shuffle button */}
-              <button
-                onClick={handleShuffle}
-                disabled={isSweeping || isShuffling}
-                className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 hover:text-white font-bold text-xs sm:text-sm border border-slate-600 shadow-md transition-all flex items-center gap-2 hover:scale-105 active:scale-95 cursor-pointer"
-                title="Xáo trộn lại vị trí các rương"
-              >
-                <Shuffle className={`w-4 h-4 ${isShuffling ? 'animate-spin' : ''}`} />
-                <span>Xáo Trộn</span>
-              </button>
+        <div className={`relative grid gap-3 sm:gap-4 ${getGridColsClass()}`}>
+          {chests.map((chest, index) => {
+            const isSelectedInSweep = activeSweepIndex === index;
+            const isOpened = chest.isOpened || openedChestId === chest.id;
 
-              {/* Random Sweep Open */}
+            return (
               <button
-                onClick={startRandomSweep}
+                key={chest.id}
+                onClick={() => openChest(chest)}
                 disabled={isSweeping || isShuffling}
-                className={`px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-xl transition-all flex items-center gap-2 cursor-pointer ${
-                  isSweeping
-                    ? 'bg-amber-500/30 text-amber-300 border border-amber-400/40 animate-pulse'
-                    : 'bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 shadow-amber-500/30 hover:scale-105 active:scale-95'
+                aria-label={`Rương kho báu số ${index + 1}`}
+                className={`relative min-h-[96px] aspect-[4/3] rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center p-2.5 select-none group transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 ${
+                  isShuffling ? 'scale-90 rotate-6 opacity-60' : ''
+                } ${
+                  isSelectedInSweep
+                    ? 'bg-gradient-to-tr from-amber-500/40 via-yellow-400/35 to-orange-500/40 border-amber-300 ring-4 ring-amber-300/70 scale-105 shadow-[0_0_30px_rgba(251,191,36,0.55)] z-20'
+                    : isOpened
+                    ? 'bg-gradient-to-tr from-emerald-500/35 to-teal-400/30 border-emerald-300 ring-4 ring-emerald-400/50 scale-105 z-20'
+                    : 'bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-amber-500/30 hover:border-amber-400 hover:bg-slate-800 hover:-translate-y-1 active:scale-95 shadow-lg'
                 }`}
               >
-                <Sparkles className={`w-4 h-4 ${isSweeping ? 'animate-spin' : ''}`} />
-                <span>{isSweeping ? 'ĐANG CHẠY CHỌN...' : 'MỞ NGẪU NHIÊN'}</span>
-              </button>
-            </div>
-          </div>
+                {/* Golden Chest Trim Accent */}
+                <div className="absolute inset-x-3 top-0 h-1 rounded-b-full bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
 
-          {/* Chests Arena Grid */}
-          <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl p-4 sm:p-6 border-2 border-slate-700 shadow-2xl min-h-[480px] max-h-[70vh] overflow-y-auto">
-            <div className={`grid gap-3 sm:gap-4 ${getGridColsClass()}`}>
-              {chests.map((chest, index) => {
-                const isSelectedInSweep = activeSweepIndex === index;
-                const isOpened = chest.isOpened || openedChestId === chest.id;
+                {/* Golden Sweep Glow Indicator */}
+                {isSelectedInSweep && (
+                  <div className="absolute inset-0 rounded-2xl bg-amber-300/20 blur-md pointer-events-none animate-pulse-fast" />
+                )}
 
-                return (
-                  <div
-                    key={chest.id}
-                    onClick={() => openChest(chest)}
-                    className={`relative aspect-[4/3] rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center p-2 select-none group transform ${
-                      isShuffling ? 'scale-90 rotate-6 opacity-60' : ''
-                    } ${
-                      isSelectedInSweep
-                        ? 'bg-gradient-to-tr from-amber-400/30 via-yellow-400/40 to-amber-300/30 border-amber-300 scale-110 shadow-2xl shadow-amber-400/40 z-20'
-                        : isOpened
-                        ? 'bg-gradient-to-tr from-emerald-500/30 to-teal-400/30 border-emerald-400 scale-105'
-                        : 'bg-slate-800/80 border-slate-700 hover:border-amber-400/60 hover:bg-slate-800 hover:scale-105 active:scale-95 shadow-md'
-                    }`}
-                  >
-                    {/* Golden Sweep Glow Indicator */}
-                    {isSelectedInSweep && (
-                      <div className="absolute inset-0 rounded-2xl bg-amber-400/20 blur-md pointer-events-none animate-pulse-fast" />
-                    )}
+                {/* Chest Number Badge */}
+                <div className="absolute top-2 left-2.5 text-xs font-black text-amber-300/90 bg-slate-950/60 px-1.5 py-0.5 rounded-md border border-amber-400/20">
+                  #{index + 1}
+                </div>
 
-                    {/* Chest Number Badge */}
-                    <div className="absolute top-1.5 left-2 text-[10px] font-mono font-bold text-slate-400">
-                      #{index + 1}
+                {/* Chest Graphic */}
+                <div className="relative flex flex-col items-center justify-center mt-2">
+                  {isOpened ? (
+                    <div className="flex flex-col items-center animate-pop-in">
+                      <span className="text-3xl sm:text-4xl filter drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]">
+                        {chest.student.avatarEmoji || '👑'}
+                      </span>
+                      <span className="text-emerald-200 font-black text-xs sm:text-sm mt-1 text-center line-clamp-1 projector-text">
+                        {chest.student.name}
+                      </span>
                     </div>
-
-                    {/* Chest graphic / representation */}
-                    <div className="relative flex flex-col items-center justify-center">
-                      {isOpened ? (
-                        <div className="flex flex-col items-center animate-in zoom-in-75 duration-300">
-                          <span className="text-3xl sm:text-4xl filter drop-shadow">
-                            {chest.student.avatarEmoji || '👑'}
-                          </span>
-                          <span className="text-emerald-300 font-black text-xs sm:text-sm mt-1 text-center line-clamp-1">
-                            {chest.student.name}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <span
-                            className={`text-3xl sm:text-4xl filter drop-shadow transition-transform ${
-                              isSelectedInSweep ? 'scale-125' : 'group-hover:scale-110'
-                            }`}
-                          >
-                            🎁
-                          </span>
-                          <span className="text-slate-400 font-bold text-[10px] mt-1 flex items-center gap-0.5">
-                            <Lock className="w-2.5 h-2.5" /> Bí mật
-                          </span>
-                        </div>
-                      )}
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={`text-3xl sm:text-4xl filter drop-shadow-md transition-transform ${
+                          isSelectedInSweep ? 'scale-125' : 'group-hover:scale-110'
+                        }`}
+                        aria-hidden="true"
+                      >
+                        🎁
+                      </span>
+                      <span className="text-slate-300 font-bold text-xs mt-1 flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-amber-400" aria-hidden="true" />
+                        <span>Bí mật</span>
+                      </span>
                     </div>
+                  )}
+                </div>
 
-                    {/* Open badge if opened */}
-                    {isOpened && (
-                      <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-1 shadow-md animate-bounce">
-                        <Unlock className="w-3 h-3" />
-                      </div>
-                    )}
+                {/* Open badge */}
+                {isOpened && (
+                  <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-1.5 shadow-md animate-bounce">
+                    <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                )}
+              </button>
+            );
+          })}
         </div>
-      )}
-    </div>
+      </div>
+    </GameStageHUD>
   );
 };

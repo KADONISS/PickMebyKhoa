@@ -3,8 +3,7 @@ import { useClassroom } from '../../hooks/useClassroomStore';
 import { WHEEL_COLORS } from '../../utils/constants';
 import { SPEED_DURATIONS } from '../../types';
 import { soundManager } from '../../utils/sound';
-import { Play, Sparkles } from 'lucide-react';
-import { EmptyState } from '../EmptyState';
+import { GameStageHUD } from '../GameStageHUD';
 
 export const LuckyWheel: React.FC = () => {
   const { availableStudents, openWinnerModal, gameSpeed } = useClassroom();
@@ -18,12 +17,13 @@ export const LuckyWheel: React.FC = () => {
   const currentRotationRef = useRef<number>(0);
   const animFrameIdRef = useRef<number | null>(null);
   const lastSliceIndexRef = useRef<number>(-1);
+  const bulbPhaseRef = useRef<number>(0);
 
   const numStudents = availableStudents.length;
 
   // Draw wheel on canvas
   const drawWheel = useCallback(
-    (rotation: number) => {
+    (rotation: number, bulbPhase: number = 0) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -32,6 +32,8 @@ export const LuckyWheel: React.FC = () => {
       const dpr = window.devicePixelRatio || 1;
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
+
+      if (width === 0 || height === 0) return;
 
       if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
         canvas.width = width * dpr;
@@ -44,28 +46,20 @@ export const LuckyWheel: React.FC = () => {
 
       const centerX = width / 2;
       const centerY = height / 2;
-      const radius = Math.min(centerX, centerY) - 24;
+      const radius = Math.min(centerX, centerY) - 26;
 
       if (numStudents === 0) {
-        // Draw empty decorative wheel
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#f1f5f9';
-        ctx.fill();
-        ctx.lineWidth = 6;
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.stroke();
-
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 16px Nunito, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Chưa có học sinh khả dụng', centerX, centerY);
         ctx.restore();
         return;
       }
 
       const arc = (Math.PI * 2) / numStudents;
+
+      // Outer decorative dark ring behind bulbs
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fill();
 
       // Draw slices
       for (let i = 0; i < numStudents; i++) {
@@ -81,40 +75,37 @@ export const LuckyWheel: React.FC = () => {
         ctx.fillStyle = color;
         ctx.fill();
 
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        // Crisp slice divider
+        ctx.lineWidth = numStudents > 30 ? 1.5 : 2.5;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.stroke();
 
-        // Slice text rendering
+        // Slice text rendering (high-contrast projector readability)
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate(sliceAngle + arc / 2);
 
-        // Adjust font size dynamically based on student count
-        let fontSize = 16;
-        let textOffset = radius * 0.62;
+        let fontSize = 17;
+        let textOffset = radius * 0.86;
         let maxChars = 16;
 
         if (numStudents > 35) {
-          fontSize = 10;
-          textOffset = radius * 0.72;
+          fontSize = 11;
+          textOffset = radius * 0.9;
           maxChars = 12;
         } else if (numStudents > 25) {
-          fontSize = 12;
-          textOffset = radius * 0.68;
+          fontSize = 13;
+          textOffset = radius * 0.88;
           maxChars = 14;
         } else if (numStudents > 15) {
-          fontSize = 13;
-          textOffset = radius * 0.65;
+          fontSize = 15;
+          textOffset = radius * 0.86;
         } else if (numStudents <= 6) {
-          fontSize = 18;
-          textOffset = radius * 0.55;
+          fontSize = 20;
+          textOffset = radius * 0.82;
         }
 
-        ctx.font = `bold ${fontSize}px 'Nunito', 'Be Vietnam Pro', sans-serif`;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-        ctx.shadowBlur = 4;
+        ctx.font = `800 ${fontSize}px 'Nunito', 'Be Vietnam Pro', sans-serif`;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
@@ -123,54 +114,71 @@ export const LuckyWheel: React.FC = () => {
           displayName = displayName.substring(0, maxChars - 1) + '…';
         }
 
-        // Render emoji + name
-        const textToDraw = numStudents <= 25 ? `${student.avatarEmoji || ''} ${displayName}` : displayName;
+        const textToDraw =
+          numStudents <= 24 ? `${displayName} ${student.avatarEmoji || ''}` : displayName;
+
+        // Crisp dark outline + white fill for maximum projector legibility
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeText(textToDraw, textOffset, 0);
+
+        ctx.fillStyle = '#ffffff';
         ctx.fillText(textToDraw, textOffset, 0);
 
         ctx.restore();
       }
 
-      // Outer rim
+      // Metallic golden rim
+      const rimGrad = ctx.createLinearGradient(0, 0, width, height);
+      rimGrad.addColorStop(0, '#fde047');
+      rimGrad.addColorStop(0.5, '#f59e0b');
+      rimGrad.addColorStop(1, '#d97706');
+
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = '#f59e0b';
+      ctx.arc(centerX, centerY, radius + 3, 0, Math.PI * 2);
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = rimGrad;
       ctx.stroke();
 
-      // Outer golden dots around the rim
-      const dotCount = Math.min(36, Math.max(16, numStudents * 2));
+      // Glowing Marquee LED Bulbs around the rim
+      const dotCount = Math.min(36, Math.max(18, numStudents * 2));
       for (let d = 0; d < dotCount; d++) {
         const dotAngle = (Math.PI * 2 * d) / dotCount;
-        const dotX = centerX + (radius + 2) * Math.cos(dotAngle);
-        const dotY = centerY + (radius + 2) * Math.sin(dotAngle);
+        const dotX = centerX + (radius + 3) * Math.cos(dotAngle);
+        const dotY = centerY + (radius + 3) * Math.sin(dotAngle);
+        const isLit = (d + bulbPhase) % 2 === 0;
+
         ctx.beginPath();
-        ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-        ctx.fillStyle = d % 2 === 0 ? '#fef08a' : '#ffffff';
-        ctx.shadowColor = '#f59e0b';
-        ctx.shadowBlur = 3;
+        ctx.arc(dotX, dotY, isLit ? 4 : 2.8, 0, Math.PI * 2);
+        ctx.fillStyle = isLit ? '#fef9c3' : '#78350f';
+        ctx.shadowColor = isLit ? '#fef08a' : 'transparent';
+        ctx.shadowBlur = isLit ? 8 : 0;
         ctx.fill();
       }
+      ctx.shadowBlur = 0;
 
-      // Center cap
+      // Center metallic golden hub
       ctx.beginPath();
-      ctx.arc(centerX, centerY, 36, 0, Math.PI * 2);
-      const grad = ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, 36);
-      grad.addColorStop(0, '#fef3c7');
-      grad.addColorStop(1, '#f59e0b');
+      ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(centerX - 8, centerY - 8, 4, centerX, centerY, 40);
+      grad.addColorStop(0, '#fef9c3');
+      grad.addColorStop(0.5, '#fbbf24');
+      grad.addColorStop(1, '#b45309');
       ctx.fillStyle = grad;
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-      ctx.shadowBlur = 8;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 12;
       ctx.fill();
       ctx.lineWidth = 4;
       ctx.strokeStyle = '#ffffff';
       ctx.stroke();
+      ctx.shadowBlur = 0;
 
-      // Center icon
-      ctx.font = '24px sans-serif';
+      // Center crown icon
+      ctx.font = '28px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowBlur = 0;
-      ctx.fillText('👑', centerX, centerY);
+      ctx.fillText('👑', centerX, centerY + 1);
 
       ctx.restore();
     },
@@ -179,25 +187,33 @@ export const LuckyWheel: React.FC = () => {
 
   // Redraw when students change
   useEffect(() => {
-    drawWheel(currentRotationRef.current);
+    drawWheel(currentRotationRef.current, bulbPhaseRef.current);
   }, [drawWheel, numStudents]);
 
-  // Handle window resize for canvas responsiveness
+  // Ambient marquee bulb blink while idle
+  useEffect(() => {
+    if (isSpinning || numStudents === 0) return;
+    const interval = window.setInterval(() => {
+      bulbPhaseRef.current = (bulbPhaseRef.current + 1) % 2;
+      drawWheel(currentRotationRef.current, bulbPhaseRef.current);
+    }, 650);
+    return () => clearInterval(interval);
+  }, [isSpinning, numStudents, drawWheel]);
+
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      drawWheel(currentRotationRef.current);
+      drawWheel(currentRotationRef.current, bulbPhaseRef.current);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [drawWheel]);
 
   // Pointer position is at 12 o'clock (-PI / 2)
-  // Calculate current slice under pointer
   const getSliceUnderPointer = useCallback(
     (rotation: number) => {
       if (numStudents === 0) return -1;
       const arc = (Math.PI * 2) / numStudents;
-      // Pointer is at 12 o'clock: angle = 3*PI/2 (or -PI/2)
       let relativeAngle = (Math.PI * 1.5 - (rotation % (Math.PI * 2))) % (Math.PI * 2);
       if (relativeAngle < 0) relativeAngle += Math.PI * 2;
       return Math.floor(relativeAngle / arc) % numStudents;
@@ -206,33 +222,29 @@ export const LuckyWheel: React.FC = () => {
   );
 
   // Spin trigger
-  const spin = () => {
+  const spin = useCallback(() => {
     if (isSpinning || numStudents === 0) return;
 
     soundManager.playClick();
     setIsSpinning(true);
     setSelectedStudentName(null);
 
-    // Pick random target winner
     const winningIndex = Math.floor(Math.random() * numStudents);
     const targetStudent = availableStudents[winningIndex];
 
     const arc = (Math.PI * 2) / numStudents;
-    // Calculate target final rotation angle so that target slice stops precisely at 12 o'clock
-    // At pointer: (3*PI/2 - (finalRot % 2PI)) % 2PI = winningIndex * arc + arc / 2
-    // So finalRot % 2PI = 3*PI/2 - (winningIndex * arc + arc / 2)
     const baseRounds = gameSpeed === 'fast' ? 4 : gameSpeed === 'normal' ? 7 : 10;
     const extraRotations = baseRounds * Math.PI * 2;
     const targetOffset = Math.PI * 1.5 - (winningIndex * arc + arc / 2);
 
     const startRotation = currentRotationRef.current;
-    // Ensure we rotate forward
-    let targetRotation = startRotation + extraRotations + ((targetOffset - (startRotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
+    const targetRotation =
+      startRotation +
+      extraRotations +
+      ((targetOffset - (startRotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
 
     const duration = SPEED_DURATIONS[gameSpeed];
     const startTime = performance.now();
-
-    // EaseOutQuart easing function
     const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4);
 
     lastSliceIndexRef.current = getSliceUnderPointer(startRotation);
@@ -245,21 +257,24 @@ export const LuckyWheel: React.FC = () => {
       const currentAngle = startRotation + (targetRotation - startRotation) * easedProgress;
       currentRotationRef.current = currentAngle;
 
-      drawWheel(currentAngle);
+      // Rapid bulb chase while spinning
+      const phase = Math.floor(elapsed / 120) % 2;
+      bulbPhaseRef.current = phase;
 
-      // Check for tick crossing
+      drawWheel(currentAngle, phase);
+
+      // Tick crossing sound + spring pointer bounce
       const currentSlice = getSliceUnderPointer(currentAngle);
       if (currentSlice !== lastSliceIndexRef.current && currentSlice >= 0) {
         lastSliceIndexRef.current = currentSlice;
-        soundManager.playTick(600 + (currentSlice % 3) * 60);
+        soundManager.playTick(620 + (currentSlice % 4) * 55);
         setPointerTickAnim(true);
-        setTimeout(() => setPointerTickAnim(false), 50);
+        setTimeout(() => setPointerTickAnim(false), 55);
       }
 
       if (progress < 1) {
         animFrameIdRef.current = requestAnimationFrame(animate);
       } else {
-        // Finished
         setIsSpinning(false);
         setSelectedStudentName(targetStudent.name);
         setTimeout(() => {
@@ -269,7 +284,7 @@ export const LuckyWheel: React.FC = () => {
     };
 
     animFrameIdRef.current = requestAnimationFrame(animate);
-  };
+  }, [isSpinning, numStudents, availableStudents, gameSpeed, getSliceUnderPointer, drawWheel, openWinnerModal]);
 
   useEffect(() => {
     return () => {
@@ -280,67 +295,55 @@ export const LuckyWheel: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 sm:p-6 w-full max-w-4xl mx-auto">
-      {numStudents === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="flex flex-col items-center w-full">
-          {/* Wheel Frame */}
-          <div className="relative flex items-center justify-center w-full max-w-[460px] aspect-square">
-            {/* Ambient Background Glow */}
-            <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-amber-400/20 via-orange-500/20 to-yellow-300/20 blur-2xl pointer-events-none" />
+    <GameStageHUD
+      gameId="wheel"
+      subtitle="Nhấp trực tiếp vào vòng quay hoặc bấm SPACE để quay!"
+      isRunning={isSpinning}
+      actionLabel="QUAY NGAY"
+      runningLabel="ĐANG QUAY..."
+      actionGradient="from-amber-400 via-orange-500 to-amber-500 hover:from-amber-300 hover:to-orange-400 text-slate-950"
+      onPrimaryAction={spin}
+      statusExtra={
+        selectedStudentName && !isSpinning ? (
+          <div className="px-3.5 py-1.5 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-200 text-xs sm:text-sm font-black animate-pop-in">
+            Vừa gọi: <span className="text-amber-300">{selectedStudentName}</span>
+          </div>
+        ) : undefined
+      }
+    >
+      <div className="clay-card rounded-3xl p-4 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden min-h-[450px]">
+        {/* Ambient Spotlight Glow */}
+        <div
+          className={`absolute w-[480px] h-[480px] rounded-full blur-3xl pointer-events-none transition-opacity duration-500 ${
+            isSpinning
+              ? 'bg-gradient-to-tr from-amber-500/30 via-orange-500/25 to-yellow-400/30 opacity-100'
+              : 'bg-gradient-to-tr from-amber-500/15 via-orange-500/15 to-yellow-400/15 opacity-80'
+          }`}
+        />
 
-            {/* 12 o'clock pointer */}
-            <div
-              className={`absolute -top-3 z-20 flex flex-col items-center transform transition-transform duration-75 origin-top ${
-                pointerTickAnim ? 'scale-110 -rotate-6' : 'scale-100 rotate-0'
-              }`}
-            >
-              <div className="w-8 h-10 bg-gradient-to-b from-rose-500 to-red-600 rounded-t-md shadow-xl flex items-center justify-center text-white font-black text-xs border-2 border-white">
-                ▼
-              </div>
-              <div className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[18px] border-t-red-600 drop-shadow-md" />
+        {/* Wheel Frame */}
+        <div className="relative flex items-center justify-center w-full max-w-[460px] sm:max-w-[500px] aspect-square">
+          {/* 12 o'clock golden-crimson pointer */}
+          <div
+            className={`absolute -top-4 z-20 flex flex-col items-center transform transition-transform duration-75 origin-top ${
+              pointerTickAnim ? 'scale-110 -rotate-12' : 'scale-100 rotate-0'
+            }`}
+          >
+            <div className="w-10 h-10 bg-gradient-to-b from-rose-500 to-red-600 rounded-xl shadow-2xl flex items-center justify-center text-white font-black text-sm border-2 border-amber-200">
+              ▼
             </div>
-
-            {/* HTML5 Canvas Wheel */}
-            <canvas
-              ref={canvasRef}
-              className="w-full h-full rounded-full shadow-2xl border-4 border-amber-300/60 bg-slate-900 cursor-pointer"
-              onClick={!isSpinning ? spin : undefined}
-            />
+            <div className="w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-t-[20px] border-t-red-600 drop-shadow-lg -mt-1" />
           </div>
 
-          {/* Controls & Status */}
-          <div className="mt-8 flex flex-col items-center gap-4">
-            <button
-              onClick={spin}
-              disabled={isSpinning || numStudents === 0}
-              className={`relative group overflow-hidden px-10 py-5 rounded-3xl font-black text-xl sm:text-2xl tracking-wide shadow-2xl transition-all transform flex items-center gap-3 ${
-                isSpinning
-                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed scale-95 shadow-none'
-                  : 'bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 hover:scale-105 active:scale-95 shadow-amber-500/40 hover:shadow-amber-500/60 cursor-pointer'
-              }`}
-            >
-              <span className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              <Play className={`w-7 h-7 ${isSpinning ? 'animate-spin' : 'fill-slate-950'}`} />
-              <span>{isSpinning ? 'ĐANG QUAY...' : 'QUAY NGAY'}</span>
-              <Sparkles className="w-6 h-6 text-slate-950" />
-            </button>
-
-            <div className="text-center">
-              <span className="text-xs sm:text-sm font-bold text-slate-400 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700">
-                🎯 {numStudents} học sinh trong vòng quay • Nhấp vào vòng quay hoặc bấm nút để quay
-              </span>
-            </div>
-
-            {selectedStudentName && !isSpinning && (
-              <div className="text-sm font-bold text-amber-400 animate-pulse">
-                Đã gọi: {selectedStudentName}
-              </div>
-            )}
-          </div>
+          {/* HTML5 Canvas Wheel */}
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full rounded-full shadow-[0_0_50px_rgba(245,158,11,0.22)] cursor-pointer transition-transform active:scale-[0.99]"
+            onClick={!isSpinning ? spin : undefined}
+            aria-label="Vòng quay may mắn - Nhấp để quay"
+          />
         </div>
-      )}
-    </div>
+      </div>
+    </GameStageHUD>
   );
 };
